@@ -8,30 +8,51 @@
             camera_id   =   options.camera_id || '',
             width       =   options.width || 320,
             height      =   options.height || 180,
+            delay       =   options.delay || 1000
             preview     =   new Image(),
-            preload     =   new Image();
+            lockout     =   false,
+            debug       =   options.debug || false;
 
         if(!camera_id) {
-            // can't do anything with a camera_id
+            // can't do anything without a camera_id
             return false;   
         }
 
         // add preview image to calling div
         this.append(preview);
         $preview = $(preview);
-        $preload = $(preload);
 
         $preview.width(width + 'px');
         $preview.height(height + 'px');
 
-        function updatePreview() { 
-            $preview.attr('src', $preload.attr('src'));
-            $preload.attr('src', '/image/' + camera_id + '/now?rand=' + Math.random());
-            console.log('updating image');
+        function login() {
+            if(lockout) {
+                // force a 5 second delay between login attempts
+                setTimeout(login, 5000)
+            } else {
+                lockout = true
+                $.get('login.php', function() {
+                    if(debug) console.log('jQuery.preview: login successful');
+                    setTimeout(updatePreview, 0) 
+                    lockout = false 
+                });
+            }
         }
 
-        $preload.on('load', function() { updatePreview() });
-        $preload.on('error', function() { updatePreview() });
+        function updatePreview() { 
+            $preview.attr('src', 'image.php?c=' + camera_id + '&rand=' + Math.random());
+            if(debug) console.log('jQuery.preview: updating image');
+        }
+
+        $preview.on('load', function() {
+            setTimeout(updatePreview, delay) 
+        });
+
+
+        $preview.on('error', function() {
+            if(debug) console.log('jQuery.preview: image error'); 
+            login();
+        });
 
 
         //fetch the first image
